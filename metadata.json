@@ -1,0 +1,5 @@
+{
+  "name": "EventTick - Plateforme de Billetterie",
+  "description": "Une plateforme complète de gestion d'événements et de billetterie inspirée de Tikerama.",
+  "requestFramePermissions": ["camera"]
+}
