@@ -6,6 +6,8 @@ services:
     buildCommand: npm install && npm run build
     startCommand: node server.js
     envVars:
+      - key: NODE_VERSION
+        value: 20.10.0 # On utilise une version stable
       - key: DATABASE_URL
         value: sqlite://ticketing.db
       - key: JWT_SECRET
