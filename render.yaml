@@ -2,22 +2,17 @@ services:
   - type: web
     name: tickhost
     env: node
+    plan: free # Force le mode gratuit
     buildCommand: npm install && npm run build
-    startCommand: npm run start
+    startCommand: node server.js
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 3000
+      - key: DATABASE_URL
+        value: sqlite:///data/ticketing.db
       - key: JWT_SECRET
         generateValue: true
       - key: QR_SECRET
         generateValue: true
-      - key: DB_PATH
-        value: /data/ticketing.db
-      - key: UPLOADS_PATH
-        value: /data/uploads
-    disk:
-      name: tickhost-storage
-      mountPath: /data
-      sizeGB: 1
