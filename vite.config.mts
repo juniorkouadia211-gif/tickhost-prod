@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'framer-motion': 'motion/react',
       },
     },
     server: {
