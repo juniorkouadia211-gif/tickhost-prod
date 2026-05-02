@@ -1,111 +1,248 @@
 import React, { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Calendar, 
+  MapPin, 
+  Ticket, 
+  ChevronRight, 
+  ArrowLeft, 
+  CheckCircle2, 
+  Plus,
+  Minus,
+  Activity,
+  Users,
+  ShieldCheck
+} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from './store';
-import { LandingPage } from './components/LandingPage';
 import { Header, Nav, Sidebar } from './components/Layout';
-// ... (Imports de composants inchangés)
+import { EventList } from './components/EventList';
+import { AuthPages } from './components/AuthPages';
+import { CheckoutFlow } from './components/CheckoutFlow';
+import { AdminDashboard } from './components/AdminDashboard';
+import { MyEvents } from './components/MyEvents';
+import { ParticipantsView } from './components/ParticipantsView';
+import { CreateEventView } from './components/CreateEventView';
+import { ScannerView } from './components/ScannerView';
+import { ProfileView } from './components/ProfileView';
+import { PromoCodesView } from './components/PromoCodesView';
+import { SuperAdminView } from './components/SuperAdminView';
+import { EventMicrosite } from './components/EventMicrosite';
+import { LandingPage } from './components/LandingPage';
+import { ToastContainer } from './components/Toast';
 
 export default function App() {
   const { 
     view, setView, 
     user, setUser, 
     events, fetchEvents,
+    selectedEvent, fetchEventDetails,
+    cart, setCart,
+    orderResult,
+    myTickets, fetchMyTickets,
+    loading,
+    isOnline, setIsOnline,
+    fetchTicketCache, syncOfflineScans,
+    offlineScans,
+    isSyncing, setIsSyncing,
     fetchTenantEvent,
-    fetchMyTickets,
+    setTenantSlug,
     tenantSlug
   } = useStore();
 
   const isDashboardView = (user?.role === 'ADMIN' || user?.role === 'ORGANIZER') && !tenantSlug;
 
-  // 1. Branchement des routes URL vers les vues du State
   const params = new URLSearchParams(window.location.search);
   const tenant = params.get('tenant');
   const path = window.location.pathname;
-  const isScanRoute = path === '/scan';
-  const isLoginRoute = path === '/login' || path === '/auth';
 
+  // 1. Synchronisation de l'état initial via l'URL (Sans boucles de redirection)
   useEffect(() => {
-    if (isScanRoute) {
-      setView('scanner');
-    } else if (isLoginRoute) {
-      setView('login');
+    if (tenant) {
+      setTenantSlug(tenant);
+      fetchTenantEvent(tenant);
+      return;
     }
-  }, [isScanRoute, isLoginRoute, setView]);
+    
+    if (path === '/login') {
+      setView('login');
+    } else if (path === '/scan') {
+      setView('scanner');
+    } else if (path === '/dashboard') {
+      if (user?.role === 'ADMIN') setView('super-admin');
+      else if (user?.role === 'ORGANIZER') setView('stats');
+      else setView('login');
+    } else if (path === '/') {
+      setTenantSlug(null);
+      setView('list');
+    }
+  }, [tenant, path, setView, setTenantSlug, fetchTenantEvent, user?.role]);
 
-  // 2. Initialisation et détection du mode de fonctionnement
   const initialized = useRef(false);
 
+  // 2. Initialisation Globale (Auth & Données)
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Détection forcée via paramètre ?tenant= (Aperçu AI Studio)
-    if (tenant && tenant !== 'null') {
-      useStore.getState().setTenantSlug(tenant);
-      fetchTenantEvent(tenant);
-      return;
-    }
-
-    // Détection automatique du tenant par domaine (Production)
-    const host = window.location.hostname.toLowerCase();
-    const parts = host.split('.');
-    
-    // Sur Cloud Run / Local, on évite la détection par domaine automatique
-    const isCloudRunOrLocal = host.includes('run.app') || host === 'localhost' || host.includes('web-center');
-    
-    if (!isCloudRunOrLocal && parts.length >= 3) {
-      const subdomain = parts[0];
-      const reserved = ['www', 'api', 'admin', 'dev'];
-      if (!reserved.includes(subdomain)) {
-        useStore.getState().setTenantSlug(subdomain);
-        fetchTenantEvent(subdomain);
-        return;
+    // Chargement de l'utilisateur
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        if (parsedUser.token) {
+          localStorage.setItem('token', parsedUser.token);
+          fetchMyTickets(parsedUser.token);
+        }
+      } catch (e) {
+        localStorage.removeItem('user');
       }
     }
 
-    // Si on arrive ici : Mode Application Principale (Landing Page)
-    fetchEvents();
-    
-    // Reconnexion automatique
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      if (parsedUser.token) fetchMyTickets(parsedUser.token);
+    // Chargement des événements (si pas en mode microsite)
+    if (!tenant) {
+      fetchEvents();
     }
-  }, []);
 
-  // 3. Rendu Principal
-  
-  // Affichage du Microsite (Site Client Dédié)
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (localStorage.getItem('token')) syncOfflineScans();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [tenant, fetchEvents, fetchMyTickets, setUser, setIsOnline, syncOfflineScans]);
+
+  // 3. Logic de Protection des Vues
+  useEffect(() => {
+    if (view === 'my-tickets' && user) {
+      fetchMyTickets(user.token);
+    }
+    
+    const protectedViews = ['admin', 'stats', 'my-events', 'promo-codes', 'moderation', 'finances', 'admin-events', 'organizers', 'super-admin', 'sys-settings', 'client-space'];
+    if (protectedViews.includes(view) && !user) {
+      setView('login');
+    }
+
+    if (view === 'scanner') {
+      if (user || useStore.getState().staffSession) {
+        syncOfflineScans();
+        fetchTicketCache();
+      }
+    }
+  }, [view, user, fetchMyTickets, setView, syncOfflineScans, fetchTicketCache]);
+
+  useEffect(() => {
+    if (selectedEvent?.primary_color) {
+      document.documentElement.style.setProperty('--primary-color', selectedEvent.primary_color);
+    } else {
+      document.documentElement.style.setProperty('--primary-color', '#10b981');
+    }
+  }, [selectedEvent]);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const addToCart = (type: any) => {
+    if (!selectedEvent) return;
+    const existing = cart.find(item => item.ticketTypeId === type.id);
+    if (existing) {
+      setCart(cart.map(item => 
+        item.ticketTypeId === type.id ? { ...item, quantity: item.quantity + 1 } : item
+      ));
+    } else {
+      setCart([...cart, {
+        ticketTypeId: type.id,
+        ticketTypeName: type.name,
+        price: type.price,
+        quantity: 1,
+        eventName: selectedEvent.name
+      }]);
+    }
+  };
+
+  const removeFromCart = (ticketTypeId: string) => {
+    const existing = cart.find(item => item.ticketTypeId === ticketTypeId);
+    if (existing && existing.quantity > 1) {
+      setCart(cart.map(item => 
+        item.ticketTypeId === ticketTypeId ? { ...item, quantity: item.quantity - 1 } : item
+      ));
+    } else {
+      setCart(cart.filter(item => item.ticketTypeId !== ticketTypeId));
+    }
+  };
+
+  const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   if (tenantSlug) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white">
+      <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-primary/30 overflow-x-hidden">
+        <ToastContainer />
         <Header />
-        <main className="pt-20 pb-24 px-4">
+        <main className="w-full pt-20 pb-24 px-4 md:px-8 lg:px-12">
           <EventMicrosite />
         </main>
       </div>
     );
   }
 
-  // Affichage de la Landing Page (Adresse Racine /)
   if (view === 'list') {
     return (
-       <div className="min-h-screen bg-[#050505] text-white">
-         <LandingPage />
-       </div>
+      <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
+        <ToastContainer />
+        <LandingPage />
+      </div>
     );
   }
 
-  // Affichage Standard (Dashboard, Auth, etc.)
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex">
+    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-primary/30 overflow-x-hidden flex w-full max-w-full">
+      <ToastContainer />
       {isDashboardView && <Sidebar />}
-      <div className={`flex-1 flex flex-col ${isDashboardView ? 'lg:pl-64' : ''}`}>
-        <Header />
-        <main className="flex-1 p-4 md:p-8 pt-24">
-          {/* Rendu conditionnel des vues admin/user ici... */}
-          {/* Ex: {view === 'login' && <AuthPages />} */}
+
+      <div className={`flex-1 flex flex-col min-w-0 overflow-x-hidden ${isDashboardView ? 'lg:pl-64' : ''}`}>
+        {isDashboardView ? (
+          !['super-admin', 'admin-events', 'organizers', 'moderation', 'finances', 'sys-settings', 'client-space'].includes(view) && <Header />
+        ) : <Header />}
+        
+        <main className={`flex-1 w-full max-w-full overflow-x-hidden pb-28 ${isDashboardView ? (['super-admin', 'admin-events', 'organizers', 'moderation', 'finances', 'sys-settings', 'client-space'].includes(view) ? 'pt-0' : 'pt-8 px-4 md:px-8 lg:px-12') : 'pt-20 px-4 md:px-8 lg:px-12'}`}>
+          <AnimatePresence mode="wait">
+              {view === 'login' && <AuthPages key="login" />}
+              {view === 'register' && <AuthPages key="register" />}
+              {view === 'detail' && selectedEvent && (
+                <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto space-y-8">
+                  {/* ... Contenu du détail ... */}
+                </motion.div>
+              )}
+              {view === 'checkout' && <CheckoutFlow key="checkout" />}
+              {view === 'my-tickets' && <div key="my-tickets">...</div>}
+              {view === 'scanner' && <ScannerView key="scanner" />}
+              {view === 'my-events' && <MyEvents key="my-events" />}
+              {view === 'promo-codes' && <PromoCodesView key="promo-codes" />}
+              {view === 'create-event' && <CreateEventView key="create-event" />}
+              {view === 'super-admin' && <SuperAdminView key="super-admin" />}
+              {view === 'admin-events' && <SuperAdminView key="admin-events" />}
+              {view === 'organizers' && <SuperAdminView key="organizers" />}
+              {view === 'moderation' && <SuperAdminView key="moderation" />}
+              {view === 'finances' && <SuperAdminView key="finances" />}
+              {view === 'client-space' && <SuperAdminView key="client-space" />}
+              {view === 'sys-settings' && <SuperAdminView key="sys-settings" />}
+              {(view === 'admin' || view === 'stats') && <AdminDashboard key="dashboard" />}
+              {view === 'participants' && <ParticipantsView key="participants" />}
+              {view === 'profile' && <ProfileView key="profile" />}
+          </AnimatePresence>
         </main>
       </div>
       <Nav />
