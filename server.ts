@@ -6,17 +6,25 @@ import routes from './src/routes/index';
 import { logger } from './src/services/logger';
 import { tenantMiddleware } from './src/middlewares/tenant';
  
+// --- VÉRIFICATION DES SECRETS OBLIGATOIRES ---
 const REQUIRED_ENV_VARS = ['JWT_SECRET', 'QR_SECRET'];
+const REQUIRED_IN_PROD  = ['CINETPAY_API_SECRET'];
 const isProduction = process.env.NODE_ENV === 'production';
  
 const missingAlways = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
-if (missingAlways.length > 0) {
-  logger.warn(`Variables d'environnement manquantes : ${missingAlways.join(', ')}`);
+const missingInProd = isProduction ? REQUIRED_IN_PROD.filter(v => !process.env[v]) : [];
+const allMissing = [...missingAlways, ...missingInProd];
+ 
+if (allMissing.length > 0) {
+  logger.warn(`Variables d'environnement manquantes : ${allMissing.join(', ')}`);
+  logger.warn('Le serveur continue de démarrer mais certaines fonctionnalités pourraient échouer.');
 }
  
 const app = express();
 app.set('trust proxy', 1);
-const PORT = Number(process.env.PORT) || 3000;
+
+// Infrastructure AI Studio : le port DOIT être 3000
+const PORT = 3000;
  
 // --- MIDDLEWARES ---
 const uploadsPath = process.env.UPLOADS_PATH || path.join(process.cwd(), 'uploads');
@@ -26,6 +34,7 @@ if (!fs.existsSync(uploadsPath)) {
 app.use('/uploads', express.static(uploadsPath));
 app.use('/manifest.json', express.static(path.join(process.cwd(), 'public/manifest.json')));
 
+// Logs des requêtes API pour le debug
 app.use((req, res, next) => {
   if (req.url.startsWith('/api')) {
     logger.info(`API Request: ${req.method} ${req.url}`);
@@ -33,6 +42,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Configuration CORS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
   : [];
@@ -48,10 +58,14 @@ app.use(cors({
  
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Middleware de détection du tenant (microsites)
 app.use(tenantMiddleware);
  
+// --- ROUTES API ---
 app.use('/api', routes);
  
+// --- GESTION DES ERREURS ---
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error('Uncaught error', { error: err.message, stack: err.stack });
   res.status(err.status || 500).json({ 
@@ -60,22 +74,25 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
  
+// Erreurs 404 pour l'API
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
  
+// --- VITE / SERVING STATIQUE ---
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
     app.use(vite.middlewares);
   } else {
+    // Mode Production : Sers le build statique depuis /dist
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
+    // SPA Fallback : renvoie index.html pour toutes les routes non-API
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
-  app.listen(PORT, '0.0.0.0', () => logger.info(`Server running on port ${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => logger.info(`Server running on http://localhost:${PORT}`));
 }
  
 startServer();
- 
