@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -7,9 +8,28 @@ import { logger } from './src/services/logger';
 import { tenantMiddleware } from './src/middlewares/tenant';
 
 const app = express();
-const PORT = 3000;
+// Render impose son propre PORT via variable d'environnement
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
-app.use(express.json());
+// CORS — autoriser toutes les origines en dev, restreindre en prod
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [];
+
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? (origin, cb) => {
+        if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Not allowed by CORS'));
+        }
+      }
+    : true,
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '10mb' }));
 app.use(tenantMiddleware);
 app.use('/api', routes);
 
