@@ -10,17 +10,20 @@ export const useStore = create<AppState>((set, get) => ({
   selectedEvent: null,
   // ... (Initialisations inchangées)
 
-  setView: (view) => {
-    // Mise à jour de l'URL pour la navigation propre (back button, etc.)
-    if (view === 'login') {
-      window.history.pushState({}, '', '/login');
-    } else if (view === 'list') {
-      window.history.pushState({}, '', '/');
-    } else if (view === 'scanner') {
-      window.history.pushState({}, '', '/scan');
-    }
-    set({ view });
-  },
+ // Extrait de l'action setView dans store.ts
+setView: (view) => {
+  const currentPath = window.location.pathname;
+  if (view === 'login' && currentPath !== '/login') {
+    window.history.pushState({}, '', '/login');
+  } else if (view === 'list' && currentPath !== '/') {
+    window.history.pushState({}, '', '/');
+  } else if (view === 'scanner' && currentPath !== '/scan') {
+    window.history.pushState({}, '', '/scan');
+  } else if (view === 'super-admin' && currentPath !== '/dashboard') {
+    window.history.pushState({}, '', '/dashboard');
+  }
+  set({ view });
+},
 
   fetchEvents: async (filter?: string) => {
     set({ loading: true });
