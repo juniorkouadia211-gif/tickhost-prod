@@ -358,6 +358,67 @@ export const EventMicrosite = () => {
     );
   }
 
+  // Événement terminé ou archivé
+  if (selectedEvent.status === 'closed' || selectedEvent.status === 'archived') {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8 text-center">
+        <div className="space-y-8 max-w-lg">
+          {/* Affiche en noir et blanc */}
+          {selectedEvent.image_url && (
+            <div className="relative w-48 h-48 mx-auto rounded-3xl overflow-hidden opacity-40 grayscale">
+              <img src={selectedEvent.image_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-white/20" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Événement terminé</span>
+            </div>
+
+            <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
+              {selectedEvent.name}
+            </h1>
+
+            <p className="text-white/40 font-medium leading-relaxed">
+              Cet événement s'est tenu le{' '}
+              <span className="text-white/60 font-bold">
+                {new Date(selectedEvent.event_date).toLocaleDateString('fr-FR', {
+                  day: 'numeric', month: 'long', year: 'numeric'
+                })}
+              </span>
+              . La billetterie est maintenant fermée.
+            </p>
+
+            {selectedEvent.location && (
+              <p className="text-white/20 text-sm">📍 {selectedEvent.location}</p>
+            )}
+          </div>
+
+          {/* Accès aux billets achetés */}
+          {user && (
+            <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-5 space-y-3">
+              <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Tu as assisté à cet événement ?</p>
+              <button
+                onClick={() => setView('my-tickets')}
+                className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white/60 font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
+              >
+                Voir mes billets archivés
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setView('list')}
+            className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-white/60 font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
+          >
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const daysRemaining = Math.max(0, Math.ceil((new Date(selectedEvent.event_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
 
   const formatDate = (dateStr: string) => {
