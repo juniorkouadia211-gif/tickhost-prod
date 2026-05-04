@@ -28,20 +28,37 @@ export const tenantMiddleware = (req: Request, res: Response, next: NextFunction
     const host = hostHeader.split(':')[0].toLowerCase();
     const parts = host.split('.');
 
+    // Domaines d'hébergement — jamais des tenants
+    const hostingDomains = [
+      'onrender.com', 'render.com',
+      'vercel.app', 'netlify.app',
+      'herokuapp.com', 'railway.app',
+      'fly.dev', 'pages.dev',
+      'googleusercontent.com', 'run.app'
+    ];
+    const isHostingDomain = hostingDomains.some(d => host.endsWith(d));
+
     // CAS LOCAL DEV / TEST ENV
-    const isTestEnv = host.includes('localhost') || 
-                      host.startsWith('127.0.0.1') || 
-                      host.includes('googleusercontent.com') || 
-                      host.includes('run.app');
+    const isTestEnv = host.includes('localhost') ||
+                      host.startsWith('127.0.0.1') ||
+                      isHostingDomain;
 
     if (isTestEnv) {
       req.isMainDomain = true;
       return next();
     }
 
-    // CAS PRODUCTION (Hostname-based)
-    // Si on a au moins 3 parties (ex: concert.tickhost.com)
-    const reservedSubdomains = ['www', 'api', 'admin', 'dev', 'staging'];
+    // CAS PRODUCTION (Hostname-based sous domaine personnalisé)
+    // Domaine principal TICKHOST — jamais un tenant
+    const mainDomains = ['tickhost.ci', 'tickhost.com', 'tickhost.africa'];
+    const isMainDomain = mainDomains.some(d => host === d || host === `www.${d}`);
+    if (isMainDomain) {
+      req.isMainDomain = true;
+      return next();
+    }
+
+    // Sous-domaine personnalisé (ex: concert.tickhost.ci → tenant = concert)
+    const reservedSubdomains = ['www', 'api', 'admin', 'dev', 'staging', 'app'];
     if (parts.length >= 3) {
       const subdomain = parts[0];
       if (!reservedSubdomains.includes(subdomain)) {
