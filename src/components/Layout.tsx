@@ -83,12 +83,12 @@ export const Header = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-20 bg-black/40 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 z-40">
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('list')}>
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-          <Ticket className="text-black w-6 h-6" />
+    <header className="fixed top-0 left-0 right-0 h-16 md:h-20 bg-black/40 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 md:px-6 z-40">
+      <div className="flex items-center gap-2 md:gap-3 cursor-pointer flex-shrink-0" onClick={() => setView('list')}>
+        <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
+          <Ticket className="text-black w-4 h-4 md:w-6 md:h-6" />
         </div>
-        <h1 className="text-xl font-black tracking-tighter text-white uppercase">
+        <h1 className="text-base md:text-xl font-black tracking-tighter text-white uppercase whitespace-nowrap">
           {tenantSlug && selectedEvent ? selectedEvent.name : <>TICK<span className="text-primary">HOST</span></>}
         </h1>
       </div>
