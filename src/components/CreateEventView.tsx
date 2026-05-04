@@ -146,6 +146,50 @@ export const CreateEventView = () => {
   const [isPartnerPaymentProcessing, setIsPartnerPaymentProcessing] = useState(false);
   const [partnerPaymentStep, setPartnerPaymentStep] = useState<'idle' | 'cinetpay' | 'processing'>('idle');
 
+  // Détection automatique des couleurs dominantes d'une image
+  const extractDominantColor = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 50; // Réduire pour performance
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve('#10b981');
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+
+        // Calculer la couleur moyenne en ignorant les pixels trop sombres ou trop clairs
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+          if (brightness > 30 && brightness < 220) { // Ignorer noir et blanc
+            r += data[i];
+            g += data[i+1];
+            b += data[i+2];
+            count++;
+          }
+        }
+        if (count === 0) return resolve('#10b981');
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+
+        // Saturer la couleur pour la rendre plus vive
+        const max = Math.max(r, g, b);
+        const factor = max > 0 ? Math.min(255 / max, 2.5) : 1;
+        r = Math.min(255, Math.round(r * factor));
+        g = Math.min(255, Math.round(g * factor));
+        b = Math.min(255, Math.round(b * factor));
+
+        resolve(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+      };
+      img.onerror = () => resolve('#10b981');
+      img.src = dataUrl;
+    });
+  };
+
   const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -154,10 +198,34 @@ export const CreateEventView = () => {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const result = reader.result as string;
-        setPosterPreview(result);
-        setForm(prev => ({ ...prev, poster_image: result }));
+        setPosterPreview(result); // Aperçu local immédiat
+
+        // Détection automatique de la couleur dominante
+        try {
+          const detectedColor = await extractDominantColor(result);
+          setForm(prev => ({ ...prev, primary_color: detectedColor }));
+          addToast('success', `Couleur détectée automatiquement ${detectedColor} — tu peux la modifier`);
+        } catch { /* ignorer si échec */ }
+
+        // Upload vers le serveur pour éviter le base64 en DB
+        try {
+          const uploadRes = await fetch('/api/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: result, filename: file.name }),
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.success) {
+            setForm(prev => ({ ...prev, poster_image: uploadData.url, image_url: uploadData.url }));
+          } else {
+            // Fallback base64 si upload échoue
+            setForm(prev => ({ ...prev, poster_image: result }));
+          }
+        } catch {
+          setForm(prev => ({ ...prev, poster_image: result }));
+        }
       };
       reader.readAsDataURL(file);
     }
