@@ -248,17 +248,19 @@ export const useStore = create<AppState>((set, get) => ({
       const params = new URLSearchParams(window.location.search);
       const tenantParam = params.get('tenant');
       const currentTenant = tenantParam || get().tenantSlug;
- 
+
       let url = '/api/events';
       const urlParams = new URLSearchParams();
-      
-      if (currentTenant) {
+
+      // Si filter=mine (dashboard organisateur), ne jamais envoyer le tenant
+      // sinon le backend retourne l'événement du tenant au lieu des événements de l'organisateur
+      if (currentTenant && filter !== 'mine') {
         urlParams.append('tenant', currentTenant);
       }
       if (filter) {
         urlParams.append('filter', filter);
       }
-      
+
       const queryString = urlParams.toString();
       if (queryString) {
         url = `/api/events?${queryString}`;
