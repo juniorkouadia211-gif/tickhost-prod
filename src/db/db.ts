@@ -352,7 +352,10 @@ try {
   if (!eventColumns.some(c => c.name === 'updated_at')) {
     db.exec("ALTER TABLE events ADD COLUMN updated_at DATETIME");
   }
- 
+  if (!eventColumns.some(c => c.name === 'archived_at')) {
+    db.exec("ALTER TABLE events ADD COLUMN archived_at DATETIME");
+  }
+
   const orderColumns2 = getColumns('orders');
   if (!orderColumns2.some(c => c.name === 'promo_code_id')) {
     db.exec("ALTER TABLE orders ADD COLUMN promo_code_id TEXT REFERENCES promo_codes(id)");
@@ -529,5 +532,59 @@ const seedEvents = () => {
 };
  
 seedEvents();
- 
+
+// ─── JOB AUTOMATIQUE : désactivation et archivage des événements terminés ───
+export const runEventLifecycleJob = () => {
+  const now = new Date().toISOString();
+
+  // 1. Fermer automatiquement les événements dont la date est passée depuis plus de 24h
+  //    (laisser 24h de marge pour les événements qui se prolongent)
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const closed = db.prepare(`
+    UPDATE events 
+    SET status = 'closed', archived_at = ?
+    WHERE event_date < ? 
+    AND status = 'published'
+  `).run(now, oneDayAgo);
+
+  if (closed.changes > 0) {
+    logger.info(`[Lifecycle] ${closed.changes} événement(s) fermé(s) automatiquement`);
+    // Invalider les billets non scannés des événements fermés
+    db.prepare(`
+      UPDATE tickets SET status = 'expired'
+      WHERE ticket_type_id IN (
+        SELECT tt.id FROM ticket_types tt
+        JOIN events e ON tt.event_id = e.id
+        WHERE e.status = 'closed' AND e.event_date < ?
+      ) AND status = 'unused'
+    `).run(oneDayAgo);
+  }
+
+  // 2. Archiver les événements fermés depuis plus de 30 jours
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const archived = db.prepare(`
+    UPDATE events SET status = 'archived'
+    WHERE status = 'closed' AND archived_at < ?
+  `).run(thirtyDaysAgo);
+
+  if (archived.changes > 0) {
+    logger.info(`[Lifecycle] ${archived.changes} événement(s) archivé(s)`);
+  }
+
+  // 3. Supprimer les événements archivés depuis plus de 90 jours
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const deleted = db.prepare(`
+    DELETE FROM events 
+    WHERE status = 'archived' AND archived_at < ?
+  `).run(ninetyDaysAgo);
+
+  if (deleted.changes > 0) {
+    logger.info(`[Lifecycle] ${deleted.changes} événement(s) supprimé(s) définitivement`);
+  }
+};
+
+// Lancer le job au démarrage + toutes les heures
+runEventLifecycleJob();
+setInterval(runEventLifecycleJob, 60 * 60 * 1000);
+
 export default db;
