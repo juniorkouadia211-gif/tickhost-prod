@@ -6,11 +6,17 @@ services:
     buildCommand: npm install && npm run build
     startCommand: node server.js
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: NODE_VERSION
-        value: 20.10.0 # On utilise une version stable
-      - key: DATABASE_URL
-        value: sqlite://ticketing.db
+        value: 20.10.0
       - key: JWT_SECRET
         generateValue: true
       - key: QR_SECRET
         generateValue: true
+      - key: CINETPAY_API_SECRET
+        value: your-cinetpay-secret-here
+      - key: ALLOWED_ORIGINS
+        value: ""
+      - key: BASE_URL
+        value: "https://tickhost.onrender.com"
