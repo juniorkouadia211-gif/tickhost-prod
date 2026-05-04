@@ -212,14 +212,39 @@ export const webhook = async (req: Request, res: Response) => {
     if (status === 'paid' || status === 'ACCEPTED') {
       db.transaction(() => {
         db.prepare("UPDATE orders SET status = 'paid' WHERE id = ?").run(order.id);
-        
+
+        // Prélèvement automatique de la commission TICKHOST
+        const commissionRateRes = db.prepare("SELECT value FROM system_settings WHERE key = 'commission_rate'").get() as any;
+        const commissionRate = parseFloat(commissionRateRes?.value || '5') / 100;
+        const commissionAmount = Math.round(order.total_amount * commissionRate);
+        const organizerAmount = order.total_amount - commissionAmount;
+
+        // Récupérer l'organisateur via l'événement du premier billet
+        const firstItem = db.prepare('SELECT ticket_type_id FROM order_items WHERE order_id = ? LIMIT 1').get(order.id) as any;
+        if (firstItem) {
+          const eventRow = db.prepare('SELECT organizer_id, id as event_id FROM events WHERE id = (SELECT event_id FROM ticket_types WHERE id = ?)').get(firstItem.ticket_type_id) as any;
+          if (eventRow) {
+            // Enregistrer la commission dans les logs financiers
+            db.prepare(`
+              INSERT INTO payouts (id, organizer_id, amount, commission_rate, payout_method, payout_details, status)
+              VALUES (?, ?, ?, ?, 'pending', ?, 'pending')
+            `).run(
+              uuidv4(),
+              eventRow.organizer_id,
+              organizerAmount,
+              commissionRate * 100,
+              JSON.stringify({ orderId: order.id, commissionAmount, totalAmount: order.total_amount, eventId: eventRow.event_id })
+            );
+          }
+        }
+
         // Update promo code stats if used
         if (order.promo_code_id) {
           db.prepare('UPDATE promo_codes SET usage_count = usage_count + 1, total_saved = total_saved + ? WHERE id = ?').run(
             order.discount_amount || 0, order.promo_code_id
           );
         }
- 
+
         // Generate tickets only on payment
         const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id) as any[];
         for (const item of items) {
@@ -227,14 +252,14 @@ export const webhook = async (req: Request, res: Response) => {
             const ticketId = uuidv4();
             const uniqueCode = Math.random().toString(36).substring(2, 10).toUpperCase();
             const qrData = signTicket(uniqueCode);
-            
+
             db.prepare('INSERT INTO tickets (id, order_id, ticket_type_id, unique_code, qr_code_data, status) VALUES (?, ?, ?, ?, ?, ?)').run(
               ticketId, order.id, item.ticket_type_id, uniqueCode, qrData, 'unused'
             );
           }
         }
       })();
-      logger.info('Webhook: Payment confirmed and tickets issued', { orderId: order.id });
+      logger.info('Webhook: Payment confirmed, tickets issued, commission recorded', { orderId: order.id });
     } else {
       // Handle failure
       db.transaction(() => {
@@ -266,4 +291,3 @@ export const webhook = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
- 
