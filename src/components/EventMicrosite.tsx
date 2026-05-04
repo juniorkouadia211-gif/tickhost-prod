@@ -329,7 +329,17 @@ export const EventMicrosite = () => {
     }
   }, [selectedEvent]);
 
-  if (!selectedEvent) return null;
+  if (!selectedEvent) {
+    // Afficher un écran de chargement au lieu d'un écran noir
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/30 text-xs font-black uppercase tracking-widest">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Suspended View
   if ((selectedEvent as any).moderation_status === 'suspended') {
