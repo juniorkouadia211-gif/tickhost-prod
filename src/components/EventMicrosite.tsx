@@ -151,9 +151,8 @@ export const EventMicrosite = () => {
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    
+
     const timer = setTimeout(() => {
-      // Check if mobile
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile && !window.matchMedia('(display-mode: standalone)').matches) {
         setShowPwaBanner(true);
@@ -165,6 +164,52 @@ export const EventMicrosite = () => {
       clearTimeout(timer);
     };
   }, []);
+
+  // PWA dynamique — manifest unique par événement
+  useEffect(() => {
+    if (!selectedEvent) return;
+
+    const manifest = {
+      name: selectedEvent.name,
+      short_name: selectedEvent.name.substring(0, 12),
+      description: selectedEvent.description || `Billetterie — ${selectedEvent.name}`,
+      start_url: `/?tenant=${selectedEvent.slug}`,
+      display: 'standalone',
+      background_color: selectedEvent.primary_color || '#000000',
+      theme_color: selectedEvent.primary_color || '#000000',
+      icons: [
+        {
+          src: selectedEvent.image_url || 'https://picsum.photos/seed/tickhost/192/192',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any maskable'
+        },
+        {
+          src: selectedEvent.image_url || 'https://picsum.photos/seed/tickhost/512/512',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ]
+    };
+
+    // Injecter le manifest dynamiquement
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(blob);
+    let link = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'manifest';
+      document.head.appendChild(link);
+    }
+    link.href = manifestUrl;
+
+    // Mettre à jour le titre et theme-color
+    document.title = selectedEvent.name;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', selectedEvent.primary_color || '#000000');
+
+    return () => URL.revokeObjectURL(manifestUrl);
+  }, [selectedEvent?.id, selectedEvent?.primary_color]);
 
   const handleInstallPwa = async () => {
     if (!deferredPrompt) return;
@@ -183,6 +228,39 @@ export const EventMicrosite = () => {
       setView('detail');
     }
   }, [view, setView]);
+
+  // Luminosité maximale + WakeLock quand l'onglet "Mon Ticket" est actif
+  useEffect(() => {
+    let wakeLock: any = null;
+
+    const enableBrightness = async () => {
+      // WakeLock — empêche l'écran de s'éteindre
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        } catch { /* non supporté ou refusé */ }
+      }
+      // Luminosité maximale via meta theme et CSS filter
+      document.documentElement.style.filter = 'brightness(1)';
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', '#ffffff');
+    };
+
+    const disableBrightness = () => {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+      document.documentElement.style.filter = '';
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', '#000000');
+    };
+
+    if (view === 'my-tickets') {
+      enableBrightness();
+    } else {
+      disableBrightness();
+    }
+
+    return () => disableBrightness();
+  }, [view]);
 
   useEffect(() => {
     // Initial loading simulation for skeletons
