@@ -8,7 +8,7 @@ import {
   Eye, Pause, Play, RefreshCw, Mail, Lock,
   ChevronRight, Smartphone, UserPlus, Zap, DollarSign,
   ArrowRight, ShieldCheck, PieChart as PieChartIcon,
-  Calendar, Star, MessageSquare, MessageCircle
+  Calendar, Star, MessageSquare, MessageCircle, ExternalLink
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
@@ -416,6 +416,16 @@ const EventsSupervision = ({ events, onModerate, onVoirStats }: any) => (
                    </td>
                    <td className="px-10 py-6 text-right">
                       <div className="flex items-center justify-end gap-3 translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                        {/* Lien microsite */}
+                        <a
+                          href={`/?tenant=${ev.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all"
+                          title="Voir le microsite"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-white/40" />
+                        </a>
                         <button 
                           onClick={() => onVoirStats(ev)}
                           className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-110 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
@@ -491,6 +501,35 @@ const OrganizersTable = ({ organizers, onSuspend, onDelete }: any) => {
                     <div>
                       <p className="text-sm font-black uppercase tracking-tight text-white group-hover:text-emerald-500 transition-colors">{org.full_name}</p>
                       <p className="text-[10px] text-white/20 font-bold lowercase">{org.email}</p>
+                      {/* Infos de reversement */}
+                      <div className="flex gap-2 mt-1.5 flex-wrap">
+                        {org.mobile_money_num ? (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                            <Smartphone className="w-2.5 h-2.5 text-yellow-500" />
+                            <span className="text-[8px] font-black text-yellow-500">MM: {org.mobile_money_num}</span>
+                          </div>
+                        ) : null}
+                        {org.wave_num ? (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                            <Zap className="w-2.5 h-2.5 text-blue-500" />
+                            <span className="text-[8px] font-black text-blue-500">Wave: {org.wave_num}</span>
+                          </div>
+                        ) : null}
+                        {!org.mobile_money_num && !org.wave_num && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/10 rounded-lg border border-red-500/20">
+                            <AlertTriangle className="w-2.5 h-2.5 text-red-500" />
+                            <span className="text-[8px] font-black text-red-500">Aucun compte</span>
+                          </div>
+                        )}
+                        {org.payout_frequency && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-white/5 rounded-lg border border-white/10">
+                            <Calendar className="w-2.5 h-2.5 text-white/30" />
+                            <span className="text-[8px] font-black text-white/30">
+                              {org.payout_frequency === 'daily' ? 'Quotidien' : org.payout_frequency === 'weekly' ? 'Hebdo' : 'Après événement'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -609,7 +648,7 @@ const FinancesBlock = ({ data, onUpdatePayout }: any) => {
 
                                 <div className="space-y-3">
                                     <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1 text-center">Canaux de paiement</p>
-                                    <div className="flex gap-3">
+                                    <div className="flex gap-3 flex-wrap">
                                         {p.mobile_money_num && (
                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
                                               <Smartphone className="w-3 h-3 text-yellow-500" />
@@ -622,7 +661,21 @@ const FinancesBlock = ({ data, onUpdatePayout }: any) => {
                                               <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Wave: {p.wave_num}</span>
                                            </div>
                                         )}
+                                        {!p.mobile_money_num && !p.wave_num && (
+                                           <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 rounded-xl border border-red-500/20">
+                                              <AlertTriangle className="w-3 h-3 text-red-500" />
+                                              <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Aucun compte renseigné</span>
+                                           </div>
+                                        )}
                                     </div>
+                                    {p.payout_frequency && (
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Calendar className="w-3 h-3 text-white/20" />
+                                        <span className="text-[9px] text-white/30 font-black uppercase tracking-widest">
+                                          Fréquence : {p.payout_frequency === 'daily' ? 'Quotidienne' : p.payout_frequency === 'weekly' ? 'Hebdomadaire' : 'Après événement'}
+                                        </span>
+                                      </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -728,6 +781,21 @@ const ModerationCenter = ({ data, onModerate }: any) => {
                             <div className="space-y-1">
                                 <h4 className="font-black text-lg uppercase tracking-tight italic">{ev.name}</h4>
                                 <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">{ev.organizer_name}</p>
+                                {/* Contacts support organisateur */}
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                  {ev.support_email && (
+                                    <a href={`mailto:${ev.support_email}`} className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all">
+                                      <Mail className="w-2.5 h-2.5 text-white/30" />
+                                      <span className="text-[8px] font-black text-white/30">{ev.support_email}</span>
+                                    </a>
+                                  )}
+                                  {ev.support_whatsapp && (
+                                    <a href={`https://wa.me/${ev.support_whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-lg border border-green-500/20 hover:bg-green-500/20 transition-all">
+                                      <MessageCircle className="w-2.5 h-2.5 text-green-500" />
+                                      <span className="text-[8px] font-black text-green-500">{ev.support_whatsapp}</span>
+                                    </a>
+                                  )}
+                                </div>
                                 <p className="text-[9px] font-black text-red-500/60 uppercase mt-2">ALERTE NIVEAU 2</p>
                             </div>
                         </div>
@@ -881,33 +949,28 @@ const SystemSettings = ({ settings, onSave }: any) => {
                  <div className="bg-black border border-white/5 rounded-[3rem] p-12 shadow-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] -mr-32 -mt-32" />
                     <div className="relative z-10 space-y-8">
-                        <h3 className="text-xl font-black uppercase tracking-tighter italic border-b border-white/5 pb-6">Ressources & CPU</h3>
-                        <div className="space-y-8">
-                           <div className="flex items-center justify-between">
-                              <div className="space-y-1">
-                                 <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Instances Actives</p>
-                                 <div className="flex items-center gap-2">
-                                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-                                     <p className="text-2xl font-black italic">08 / 16</p>
-                                 </div>
-                              </div>
-                              <button className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase text-white/60 hover:text-emerald-500 transition-colors">
-                                 Add Instance
-                              </button>
-                           </div>
-                           <div className="space-y-2">
-                              <div className="flex justify-between text-[10px] font-black text-white/20 uppercase tracking-widest">
-                                 <span>Charge Moteur Global</span>
-                                 <span>52%</span>
-                              </div>
-                              <div className="h-4 bg-white/5 rounded-full overflow-hidden p-1">
-                                 <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: '52%' }}
-                                    className="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-yellow-500 rounded-full" 
-                                 />
-                              </div>
-                           </div>
+                        <h3 className="text-xl font-black uppercase tracking-tighter italic border-b border-white/5 pb-6">Infos Plateforme</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-1">
+                            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Hébergement</p>
+                            <p className="text-sm font-black text-white">Render.com</p>
+                            <p className="text-[9px] text-white/20">Plan Free — SQLite</p>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-1">
+                            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Version</p>
+                            <p className="text-sm font-black text-white">TICKHOST v1.0.0</p>
+                            <p className="text-[9px] text-emerald-500">● Système Opérationnel</p>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-1">
+                            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Paiement</p>
+                            <p className="text-sm font-black text-white">CinetPay (Simulé)</p>
+                            <p className="text-[9px] text-yellow-500">⚠ Mode Test actif</p>
+                          </div>
+                          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-1">
+                            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Base de données</p>
+                            <p className="text-sm font-black text-white">SQLite (ticketing.db)</p>
+                            <p className="text-[9px] text-orange-500">⚠ Éphémère sur Render</p>
+                          </div>
                         </div>
                     </div>
                  </div>
@@ -917,17 +980,12 @@ const SystemSettings = ({ settings, onSave }: any) => {
                     <div className="space-y-6 pt-6">
                         <div className="bg-red-600/5 border border-red-600/10 rounded-2xl p-6">
                             <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Zone Critique</p>
-                            <p className="text-[11px] font-bold text-white/40 leading-relaxed mb-6">
-                                La modification des accès privilégiés ou des emails administrateurs nécessite une validation multifacteur TickHost.
+                            <p className="text-[11px] font-bold text-white/40 leading-relaxed">
+                                Pour changer l'email ou le mot de passe administrateur, connectez-vous directement à la base de données ou contactez le support technique TICKHOST.
                             </p>
-                            <div className="space-y-4">
-                                <div className="space-y-1">
-                                   <label className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-1">Email Master</label>
-                                   <input type="email" placeholder="admin@tickhost.com" className="w-full bg-black border border-white/5 rounded-2xl px-6 py-4 text-xs font-black text-white/60 outline-none focus:border-red-600/50" />
-                                </div>
-                                <button className="w-full py-4 bg-white/5 text-white/40 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600/10 hover:text-red-600 transition-all font-black">
-                                   Mettre à Jour les Privilèges
-                                </button>
+                            <div className="mt-4 bg-white/5 rounded-xl p-4">
+                              <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Email Admin actuel</p>
+                              <p className="text-xs font-black text-white">admin@tickhost.com</p>
                             </div>
                         </div>
                     </div>
