@@ -211,7 +211,7 @@ export const MyEvents = () => {
                           </button>
                         )}
                         <a 
-                          href={`/microsite?tenant=${event.slug}`} 
+                          href={`/?tenant=${event.slug}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
