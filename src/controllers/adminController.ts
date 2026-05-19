@@ -439,6 +439,7 @@ export const getOrganizers = (req: AuthRequest, res: Response) => {
       SELECT 
         u.id, u.full_name, u.email, u.phone, u.is_banned,
         u.created_at,
+        u.wave_num, u.mobile_money_num, u.payout_frequency,
         COUNT(DISTINCT e.id) as events_count,
         COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount ELSE 0 END), 0) as total_revenue
       FROM users u
