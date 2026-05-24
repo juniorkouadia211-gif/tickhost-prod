@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   User, LogOut, Mail, Phone, Shield, Bell, 
@@ -17,6 +17,92 @@ export const ProfileView = () => {
     wave_num: user?.wave_num || '',
     payout_frequency: user?.payout_frequency || 'weekly'
   });
+
+  // États changement de mot de passe
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // États notifications navigateur
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    notif_sales: true, notif_daily: false, notif_security: true
+  });
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
+
+  const requestNotifPermission = async () => {
+    if (!('Notification' in window)) {
+      addToast('error', 'Ton navigateur ne supporte pas les notifications');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotifPermission(permission);
+    if (permission === 'granted') {
+      addToast('success', 'Notifications activées !');
+      new Notification('🎟️ TICKHOST', { body: 'Tu recevras des alertes ici à chaque vente.' });
+    } else {
+      addToast('error', 'Notifications refusées — tu peux les activer dans les paramètres du navigateur');
+    }
+  };
+
+  const handleNotifPrefChange = async (key: string, value: boolean) => {
+    const updated = { ...notifPrefs, [key]: value };
+    setNotifPrefs(updated);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await fetch('/api/auth/notification-prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updated)
+      });
+    } catch { /* silencieux */ }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      addToast('error', 'Tous les champs sont requis');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      addToast('error', 'Les mots de passe ne correspondent pas');
+      return;
+    }
+    if (newPassword.length < 8) {
+      addToast('error', 'Le mot de passe doit faire au moins 8 caractères');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast('success', 'Mot de passe modifié avec succès');
+        setShowPasswordForm(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        addToast('error', data.error || 'Erreur lors du changement');
+      }
+    } catch {
+      addToast('error', 'Erreur réseau');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleSavePayment = async () => {
     const success = await updatePaymentInfo(paymentForm);
@@ -185,61 +271,141 @@ export const ProfileView = () => {
             <h2 className="text-lg font-black uppercase tracking-tighter">Sécurité</h2>
             
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-white/40" />
+              {/* Changement de mot de passe */}
+              <div className="border-b border-white/5 pb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-white/40" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">Mot de passe</p>
+                      <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Modifiez votre mot de passe de connexion</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">Mot de passe</p>
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Dernière modification il y a 3 mois</p>
-                  </div>
+                  <button
+                    onClick={() => setShowPasswordForm(!showPasswordForm)}
+                    className="bg-white/5 border border-white/10 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                  >
+                    {showPasswordForm ? 'Annuler' : 'Changer'}
+                  </button>
                 </div>
-                <button className="bg-white/5 border border-white/10 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Changer</button>
+
+                {showPasswordForm && (
+                  <div className="mt-4 space-y-3">
+                    <input
+                      type="password"
+                      placeholder="Mot de passe actuel"
+                      value={currentPassword}
+                      onChange={e => setCurrentPassword(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-primary transition-all"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Nouveau mot de passe (min. 8 caractères)"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-primary transition-all"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirmer le nouveau mot de passe"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-primary transition-all"
+                    />
+                    <button
+                      onClick={handleChangePassword}
+                      disabled={isChangingPassword}
+                      className="w-full py-3 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                    >
+                      {isChangingPassword ? 'Modification...' : 'Confirmer le changement'}
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* Sessions actives — remplace la 2FA */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-white/5">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
                     <Shield className="w-5 h-5 text-white/40" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white">Double Authentification (2FA)</p>
-                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Protégez votre compte avec un code SMS</p>
+                    <p className="text-sm font-bold text-white">Session active</p>
+                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Connecté sur cet appareil</p>
                   </div>
                 </div>
-                {/* Toggle Switch */}
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" />
-                  <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
+                <button
+                  onClick={() => { logout(); addToast('success', 'Déconnecté de tous les appareils'); }}
+                  className="bg-red-500/10 border border-red-500/20 text-red-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                >
+                  Se déconnecter
+                </button>
               </div>
             </div>
           </section>
 
-          {/* Section: Notifications */}
+          {/* Section: Notifications navigateur */}
           <section className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-8 shadow-xl">
-            <h2 className="text-lg font-black uppercase tracking-tighter">Notifications</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black uppercase tracking-tighter">Notifications</h2>
+              {notifPermission === 'default' && (
+                <button
+                  onClick={requestNotifPermission}
+                  className="px-4 py-2 bg-primary text-black rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                >
+                  Activer les notifications
+                </button>
+              )}
+              {notifPermission === 'granted' && (
+                <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Activées
+                </span>
+              )}
+              {notifPermission === 'denied' && (
+                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Bloquées par le navigateur</span>
+              )}
+            </div>
             
             <div className="space-y-6">
               {[
-                { title: 'Alertes de vente', desc: 'Recevoir une notification à chaque billet vendu' },
-                { title: 'Rapports quotidiens', desc: 'Résumé des performances par email chaque matin' },
-                { title: 'Alertes de sécurité', desc: 'Notifications sur les connexions suspectes' }
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-2">
+                { key: 'notif_sales', title: 'Alertes de vente', desc: 'Notification instantanée à chaque billet vendu', defaultVal: true },
+                { key: 'notif_daily', title: 'Rapport quotidien', desc: 'Résumé de tes performances chaque matin', defaultVal: false },
+                { key: 'notif_security', title: 'Alertes de sécurité', desc: 'Notifications sur les connexions suspectes', defaultVal: true }
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-bold text-white">{item.title}</p>
                     <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{item.desc}</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked={i === 0} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={notifPrefs[item.key] ?? item.defaultVal}
+                      onChange={e => handleNotifPrefChange(item.key, e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary" />
                   </label>
                 </div>
               ))}
             </div>
-          </section>
+
+            {notifPermission === 'granted' && (
+              <button
+                onClick={() => {
+                  new Notification('🎟️ TICKHOST', {
+                    body: 'Les notifications fonctionnent ! Tu seras alerté à chaque vente.',
+                    icon: '/favicon.ico'
+                  });
+                }}
+                className="w-full py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              >
+                Tester une notification
+              </button>
+            )}
 
           {/* Logout Section */}
           <div className="pt-4">
