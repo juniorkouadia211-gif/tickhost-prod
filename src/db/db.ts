@@ -223,7 +223,16 @@ try {
   if (!userColumns.some(c => c.name === 'payout_frequency')) {
     db.exec("ALTER TABLE users ADD COLUMN payout_frequency TEXT DEFAULT 'weekly'");
   }
- 
+  if (!userColumns.some(c => c.name === 'notif_sales')) {
+    db.exec("ALTER TABLE users ADD COLUMN notif_sales INTEGER DEFAULT 1");
+  }
+  if (!userColumns.some(c => c.name === 'notif_daily')) {
+    db.exec("ALTER TABLE users ADD COLUMN notif_daily INTEGER DEFAULT 0");
+  }
+  if (!userColumns.some(c => c.name === 'notif_security')) {
+    db.exec("ALTER TABLE users ADD COLUMN notif_security INTEGER DEFAULT 1");
+  }
+
   const orderColumns = getColumns('orders');
   // Handle renaming payment_status to status if it exists
   if (!orderColumns.some(c => c.name === 'status')) {
