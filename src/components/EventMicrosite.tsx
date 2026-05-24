@@ -330,12 +330,38 @@ export const EventMicrosite = () => {
   }, [selectedEvent]);
 
   if (!selectedEvent) {
-    // Afficher un écran de chargement au lieu d'un écran noir
+    // Si encore en chargement — afficher spinner
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-white/30 text-xs font-black uppercase tracking-widest">Chargement...</p>
+          </div>
+        </div>
+      );
+    }
+    // Chargement terminé mais événement non trouvé
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/30 text-xs font-black uppercase tracking-widest">Chargement...</p>
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8 text-center">
+        <div className="space-y-6 max-w-md">
+          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+            <span className="text-4xl">🎟️</span>
+          </div>
+          <div className="space-y-3">
+            <h1 className="text-2xl font-black text-white uppercase tracking-tighter">
+              Événement introuvable
+            </h1>
+            <p className="text-white/40 text-sm leading-relaxed">
+              Ce lien ne correspond à aucun événement actif. Il est possible que l'événement soit terminé, que le lien soit incorrect, ou qu'il ait été supprimé.
+            </p>
+          </div>
+          <button
+            onClick={() => { window.location.href = '/'; }}
+            className="px-8 py-3 bg-primary text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 transition-all"
+          >
+            Retour à l'accueil
+          </button>
         </div>
       </div>
     );
