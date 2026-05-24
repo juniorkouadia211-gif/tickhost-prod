@@ -132,12 +132,22 @@ export const CheckoutFlow = () => {
       // 4. Succès
       addToast('success', 'Paiement réussi ! Vos billets sont prêts.');
       setOrderResult({ orderId: orderData.orderId, tickets: webhookData.tickets });
-      setMyTickets(webhookData.tickets); // Update instantly for the view
-      setView('my-tickets'); // Redirect to tickets view
+      setMyTickets(webhookData.tickets);
+      setView('my-tickets');
       setCart([]);
       setPaymentStep('form');
       fetchStats();
       if (user) fetchMyTickets(user.token);
+
+      // Notification navigateur pour l'organisateur (si permission accordée)
+      if ('Notification' in window && Notification.permission === 'granted' && selectedEvent) {
+        new Notification(`🎟️ Nouveau billet vendu — ${selectedEvent.name}`, {
+          body: `Un billet vient d'être acheté. Consulte ton dashboard pour les détails.`,
+          icon: selectedEvent.image_url || '/favicon.ico',
+          tag: `sale-${orderData.orderId}`,
+          requireInteraction: false
+        });
+      }
     } catch (err: any) {
       addToast('error', err.message);
       setPaymentStep('form');
@@ -360,12 +370,13 @@ export const CheckoutFlow = () => {
             className="bg-white p-8 rounded-[2.5rem] shadow-2xl space-y-8 text-slate-900"
           >
             <div className="flex justify-between items-center">
-              <img 
-                src="https://picsum.photos/seed/cinetpay/200/50" 
-                alt="CinetPay" 
-                className="h-8 grayscale brightness-0"
-                referrerPolicy="no-referrer"
-              />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#f97316] rounded-lg flex items-center justify-center">
+                  <span className="text-white font-black text-xs">CP</span>
+                </div>
+                <span className="font-black text-slate-800 text-lg tracking-tight">CinetPay</span>
+                <span className="text-[9px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-black uppercase">Mode Test</span>
+              </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase font-black tracking-tighter text-slate-400">Montant à payer</p>
                 <p className="text-xl font-black text-primary">{totalAmount.toLocaleString()} FCFA</p>
