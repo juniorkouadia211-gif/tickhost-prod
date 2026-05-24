@@ -291,7 +291,14 @@ export const useStore = create<AppState>((set, get) => ({
   fetchTenantEvent: async (slug: string) => {
     set({ loading: true, tenantSlug: slug });
     try {
-      const res = await fetch(`/api/events?tenant=${slug}`);
+      // Nettoyer le slug : minuscules, supprimer accents, garder tirets
+      const cleanSlug = slug.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const res = await fetch(`/api/events?tenant=${cleanSlug}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to fetch tenant event');
@@ -304,12 +311,10 @@ export const useStore = create<AppState>((set, get) => ({
         throw new Error('Event not found');
       }
     } catch (err: any) {
-      if (err.message === 'Event not found') {
-        logger.warn('Tenant event not found', { slug });
-      } else {
-        logger.error('Error fetching tenant event', { error: err.message });
-      }
-      set({ selectedEvent: null, events: [], tenantSlug: null });
+      logger.warn('Tenant event not found', { slug, error: err.message });
+      // NE PAS réinitialiser tenantSlug — garder l'état pour afficher
+      // un message d'erreur dans EventMicrosite plutôt qu'un écran noir
+      set({ selectedEvent: null, events: [] });
     } finally {
       set({ loading: false });
     }
