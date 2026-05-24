@@ -407,6 +407,8 @@ export const ProfileView = () => {
               </button>
             )}
 
+          </section>
+
           {/* Logout Section */}
           <div className="pt-4">
             <button 
