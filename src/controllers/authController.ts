@@ -94,3 +94,46 @@ export const updatePaymentInfo = async (req: any, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// Changement de mot de passe
+export const changePassword = async (req: any, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Les deux mots de passe sont requis' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, error: 'Le nouveau mot de passe doit faire au moins 8 caractères' });
+  }
+
+  try {
+    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(userId) as any;
+    if (!user) return res.status(404).json({ success: false, error: 'Utilisateur introuvable' });
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) return res.status(401).json({ success: false, error: 'Mot de passe actuel incorrect' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashed, userId);
+
+    logger.info('Password changed', { userId });
+    res.json({ success: true, message: 'Mot de passe modifié avec succès' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Sauvegarde des préférences de notification
+export const updateNotificationPrefs = async (req: any, res: Response) => {
+  const { notif_sales, notif_daily, notif_security } = req.body;
+  const userId = req.user.id;
+  try {
+    // Vérifier si les colonnes existent, sinon les créer
+    db.prepare('UPDATE users SET notif_sales = ?, notif_daily = ?, notif_security = ? WHERE id = ?')
+      .run(notif_sales ? 1 : 0, notif_daily ? 1 : 0, notif_security ? 1 : 0, userId);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
