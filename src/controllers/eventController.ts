@@ -30,17 +30,13 @@ const verifyPartnerWebhookSignature = (req: Request): boolean => {
 export const eventSchema = z.object({
   body: z.object({
     name: z.string().trim().min(3, "Le nom doit faire au moins 3 caractères"),
-    organizer_name: z.string().trim().min(2, "Le nom de l'organisateur est requis"),
-    description: z.string().trim().min(10, "La description doit être plus détaillée"),
+    organizer_name: z.string().trim().min(1, "Le nom de l'organisateur est requis").optional().or(z.literal("")),
+    description: z.string().trim().optional().or(z.literal("")),
     event_date: z.string().trim().refine(val => {
       const date = new Date(val);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      return !isNaN(date.getTime()) && date >= yesterday;
-    }, "La date de l'événement doit être valide et non passée"),
-    location: z.string().trim().min(3, "Le lieu est requis"),
+      return !isNaN(date.getTime());
+    }, "La date de l'événement doit être valide"),
+    location: z.string().trim().min(2, "Le lieu est requis"),
     image_url: z.string().trim().nullable().optional().or(z.literal("")),
     ticketTypes: z.array(z.object({
       name: z.string().trim().min(1, "Nom de catégorie requis"),
