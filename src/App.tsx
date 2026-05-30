@@ -126,7 +126,7 @@ export default function App() {
       fetchMyTickets(user.token);
     }
     
-    const protectedViews = ['admin', 'stats', 'my-events', 'promo-codes', 'moderation', 'finances', 'admin-events', 'organizers', 'super-admin', 'sys-settings', 'client-space'];
+    const protectedViews = ['admin', 'stats', 'my-events', 'promo-codes', 'moderation', 'finances', 'admin-events', 'organizers', 'super-admin', 'sys-settings', 'client-space', 'create-event', 'profile', 'participants'];
     if (protectedViews.includes(view) && !user) {
       setView('login');
     }
