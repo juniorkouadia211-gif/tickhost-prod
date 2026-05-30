@@ -160,6 +160,31 @@ export const MyEvents = () => {
                           <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                           <span className="text-[10px] font-black uppercase tracking-widest">TERMINÉ</span>
                         </div>
+                      ) : event.status === 'draft' ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-full border bg-yellow-500/10 border-yellow-500/20 text-yellow-500">
+                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">BROUILLON</span>
+                          </div>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const token = localStorage.getItem('token');
+                              const res = await fetch(`/api/events/${event.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({ status: 'published' })
+                              });
+                              if (res.ok) {
+                                addToast('success', 'Événement publié !');
+                                fetchEvents('mine');
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-black hover:scale-105 transition-all"
+                          >
+                            Publier
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleToggleStatus(event.id)}
