@@ -802,7 +802,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (res.ok) {
         addToast('success', 'Événement créé avec succès !');
         await Promise.all([
-          get().fetchEvents(),
+          get().fetchEvents('mine'),
           get().fetchStats()
         ]);
         return true;
@@ -811,7 +811,7 @@ export const useStore = create<AppState>((set, get) => ({
       return false;
     } catch (err: any) {
       logger.error('Error creating event', { error: err.message });
-      addToast('error', 'Erreur de connexion');
+      addToast('error', `Erreur réseau : ${err.message || 'vérifiez votre connexion'}`);
       return false;
     } finally {
       set({ loading: false });
