@@ -91,7 +91,7 @@ export const AdminDashboard = () => {
     ? Math.max(0, Math.ceil((new Date(displayEvent.event_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
     : 0;
 
-  const totalCapacity = adminStats?.eventFilling?.[0]?.capacity || 1000;
+  const totalCapacity = adminStats?.eventFilling?.[0]?.capacity || 0;
   const totalSold = adminStats?.ticketsSold || 0;
   const fillingRate = totalCapacity > 0 ? (totalSold / totalCapacity) * 100 : 0;
 
