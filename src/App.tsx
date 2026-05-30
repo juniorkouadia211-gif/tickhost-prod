@@ -186,6 +186,16 @@ export default function App() {
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  // Pages plein écran — totalement indépendantes du dashboard
+  if (view === 'login' || view === 'register') {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden">
+        <ToastContainer />
+        <AuthPages key={view} />
+      </div>
+    );
+  }
+
   if (tenantSlug) {
     return (
       <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-primary/30 overflow-x-hidden">
@@ -219,8 +229,6 @@ export default function App() {
         
         <main className={`flex-1 w-full max-w-full overflow-x-hidden pb-28 ${isDashboardView ? (['super-admin', 'admin-events', 'organizers', 'moderation', 'finances', 'sys-settings', 'client-space'].includes(view) ? 'pt-0' : 'pt-8 px-4 md:px-8 lg:px-12') : 'pt-20 px-4 md:px-8 lg:px-12'}`}>
           <AnimatePresence mode="wait">
-              {view === 'login' && <AuthPages key="login" />}
-              {view === 'register' && <AuthPages key="register" />}
               {view === 'detail' && selectedEvent && (
                 <motion.div key="detail" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="max-w-4xl mx-auto space-y-8">
                   {/* ... Contenu du détail ... */}
