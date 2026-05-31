@@ -402,11 +402,9 @@ export const CreateEventView = () => {
         setCreatedEventData(eventPayload);
         setShowSuccess(true);
       } else {
-        addToast('success', editingEvent ? 'Événement mis à jour' : 'Brouillon enregistré');
-        if (editingEvent) {
-          setEditingEvent(null);
-          useStore.getState().setView('my-events');
-        }
+        addToast('success', editingEvent ? 'Événement mis à jour' : 'Brouillon enregistré ! Tu peux le publier depuis "Mes Événements".');
+        setEditingEvent(null);
+        useStore.getState().setView('my-events');
       }
     }
   };
