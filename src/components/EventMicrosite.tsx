@@ -330,13 +330,17 @@ export const EventMicrosite = () => {
   }, [selectedEvent]);
 
   if (!selectedEvent) {
-    // Si encore en chargement — afficher spinner
     if (loading) {
       return (
         <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-white/30 text-xs font-black uppercase tracking-widest">Chargement...</p>
+          <div className="flex flex-col items-center gap-6 max-w-xs text-center px-6">
+            <div className="w-14 h-14 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-2">
+              <p className="text-white font-black uppercase tracking-widest text-sm">Chargement...</p>
+              <p className="text-white/30 text-xs leading-relaxed">
+                Le serveur se réveille, merci de patienter quelques secondes.
+              </p>
+            </div>
           </div>
         </div>
       );
