@@ -1,16 +1,17 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar, Ticket, QrCode, LayoutDashboard,
   LogOut, ShieldCheck, User, Scan, BarChart2,
   PlusCircle, Users, Settings, ExternalLink,
   ChevronRight, Shield, CreditCard, Activity, Bell, Globe, Mail,
-  Tag
+  Tag, X
 } from 'lucide-react';
 import { useStore } from '../store';
 
 export const Header = () => {
   const { user, setView, logout, view, tenantSlug, selectedEvent, events } = useStore();
+  const [showNotifs, setShowNotifs] = useState(false);
 
   const isDashboard = user && (user.role === 'ADMIN' || user.role === 'ORGANIZER') && !tenantSlug;
 
@@ -61,11 +62,83 @@ export const Header = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center border border-white/10 relative">
+          <div className="flex items-center gap-3 relative">
+            <button
+              onClick={() => {
+                if ('Notification' in window && Notification.permission === 'default') {
+                  Notification.requestPermission().then(perm => {
+                    if (perm === 'granted') {
+                      new Notification('🎟️ TICKHOST', { body: 'Notifications activées ! Tu seras alerté à chaque vente.' });
+                    }
+                  });
+                } else {
+                  setShowNotifs(!showNotifs);
+                }
+              }}
+              className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center border border-white/10 relative hover:bg-white/10 transition-all"
+            >
               <Bell className="w-4 h-4 text-white/40" />
               <div className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full border-2 border-[#050505]" />
-            </div>
+            </button>
+
+            {/* Panneau notifications */}
+            <AnimatePresence>
+              {showNotifs && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="absolute top-12 right-0 w-80 bg-[#111] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                >
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                    <p className="font-black text-sm uppercase tracking-widest">Notifications</p>
+                    <button onClick={() => setShowNotifs(false)}>
+                      <X className="w-4 h-4 text-white/30 hover:text-white transition-colors" />
+                    </button>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {'Notification' in window && Notification.permission === 'granted' ? (
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl">
+                          <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-white">Notifications activées</p>
+                            <p className="text-[10px] text-white/40 mt-0.5">Tu recevras une alerte à chaque vente de billet.</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            new Notification('🎟️ Test TICKHOST', { body: 'Les notifications fonctionnent parfaitement !' });
+                            setShowNotifs(false);
+                          }}
+                          className="w-full py-2.5 bg-primary/10 border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/20 transition-all"
+                        >
+                          Tester une notification
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center space-y-3 py-2">
+                        <Bell className="w-8 h-8 text-white/10 mx-auto" />
+                        <p className="text-xs text-white/40">Active les notifications pour recevoir des alertes en temps réel à chaque vente.</p>
+                        <button
+                          onClick={() => {
+                            Notification.requestPermission().then(perm => {
+                              if (perm === 'granted') {
+                                new Notification('🎟️ TICKHOST', { body: 'Notifications activées !' });
+                                setShowNotifs(false);
+                              }
+                            });
+                          }}
+                          className="w-full py-2.5 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                          Activer les notifications
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex items-center gap-3 pl-6 border-l border-white/5">
