@@ -290,33 +290,48 @@ export const useStore = create<AppState>((set, get) => ({
  
   fetchTenantEvent: async (slug: string) => {
     set({ loading: true, tenantSlug: slug });
-    try {
-      // Nettoyer le slug : minuscules, supprimer accents, garder tirets
-      const cleanSlug = slug.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
 
-      const res = await fetch(`/api/events?tenant=${cleanSlug}`);
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch tenant event');
+    // Nettoyer le slug
+    const cleanSlug = slug.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // Retry automatique — jusqu'à 4 tentatives avec délai croissant
+    // Nécessaire car Render plan gratuit peut prendre 20-30s à se réveiller
+    const MAX_RETRIES = 4;
+    const RETRY_DELAYS = [0, 3000, 6000, 10000];
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
       }
-      const data = await res.json();
-      const events = Array.isArray(data) ? data : [];
-      if (events.length > 0) {
-        set({ selectedEvent: events[0], events });
-      } else {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s par tentative
+        const res = await fetch(`/api/events?tenant=${cleanSlug}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to fetch tenant event');
+        }
+        const data = await res.json();
+        const events = Array.isArray(data) ? data : [];
+        if (events.length > 0) {
+          set({ selectedEvent: events[0], events, loading: false });
+          return; // Succès — on sort
+        }
         throw new Error('Event not found');
+      } catch (err: any) {
+        const isLastAttempt = attempt === MAX_RETRIES - 1;
+        if (isLastAttempt) {
+          logger.warn('Tenant event not found after retries', { slug: cleanSlug });
+          set({ selectedEvent: null, events: [], loading: false });
+        }
+        // Sinon on réessaie
       }
-    } catch (err: any) {
-      logger.warn('Tenant event not found', { slug, error: err.message });
-      // NE PAS réinitialiser tenantSlug — garder l'état pour afficher
-      // un message d'erreur dans EventMicrosite plutôt qu'un écran noir
-      set({ selectedEvent: null, events: [] });
-    } finally {
-      set({ loading: false });
     }
   },
  
