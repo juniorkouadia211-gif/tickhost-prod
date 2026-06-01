@@ -67,6 +67,9 @@ app.use(tenantMiddleware);
 app.use('/api', routes);
 
 async function startServer() {
+  // Endpoint santé — utilisé pour le keep-alive
+  app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
@@ -76,7 +79,22 @@ async function startServer() {
     app.use(express.static(distPath));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
-  app.listen(PORT, '0.0.0.0', () => logger.info(`Server running on http://localhost:${PORT}`));
+
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Server running on http://localhost:${PORT}`);
+
+    // Keep-alive : ping toutes les 10 minutes pour éviter la mise en veille Render
+    if (process.env.NODE_ENV === 'production' && process.env.BASE_URL) {
+      setInterval(async () => {
+        try {
+          const res = await fetch(`${process.env.BASE_URL}/health`);
+          logger.info(`Keep-alive ping: ${res.status}`);
+        } catch (err) {
+          logger.warn('Keep-alive ping failed');
+        }
+      }, 10 * 60 * 1000); // toutes les 10 minutes
+    }
+  });
 }
 
 startServer();
