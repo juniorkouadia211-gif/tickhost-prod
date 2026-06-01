@@ -439,11 +439,11 @@ export const CreateEventView = () => {
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-4xl font-black uppercase tracking-tighter">Événement Publié !</h2>
+            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter">Événement Publié !</h2>
             <p className="text-white/40 font-bold uppercase tracking-widest text-xs">Félicitations, votre billetterie est en ligne.</p>
           </div>
 
-          <div className="bg-black/40 border border-white/5 rounded-3xl p-8 space-y-6 text-left">
+          <div className="bg-black/40 border border-white/5 rounded-3xl p-4 md:p-8 space-y-6 text-left">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Événement</p>
@@ -494,12 +494,12 @@ export const CreateEventView = () => {
 
   return (
     <div className="w-full min-h-screen bg-[#050505] text-white pb-32">
-      <div className="max-w-[1600px] mx-auto p-8 space-y-8">
+      <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
         
         {/* Partie Haute: Identité | Logistique | Billetterie */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Bloc 1: Identité */}
-          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-xl">
+          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-4 md:p-8 space-y-6 shadow-xl">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                 <Type className="w-5 h-5 text-emerald-500" />
@@ -593,7 +593,7 @@ export const CreateEventView = () => {
           </div>
 
           {/* Bloc 2: Logistique */}
-          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-xl">
+          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-4 md:p-8 space-y-6 shadow-xl">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-emerald-500" />
@@ -615,7 +615,7 @@ export const CreateEventView = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Heure Début</label>
                   <div className="relative">
@@ -670,7 +670,7 @@ export const CreateEventView = () => {
           </div>
 
           {/* Bloc 3: Billetterie */}
-          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-xl">
+          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-4 md:p-8 space-y-6 shadow-xl">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
@@ -707,7 +707,7 @@ export const CreateEventView = () => {
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:border-emerald-500 outline-none transition-all" 
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Prix</label>
                       <input 
@@ -736,9 +736,9 @@ export const CreateEventView = () => {
         </div>
 
         {/* Partie Basse: Design & Aperçu */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
           {/* Bloc Design */}
-          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-10 shadow-xl">
+          <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-4 md:p-8 space-y-10 shadow-xl">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                 <Palette className="w-5 h-5 text-emerald-500" />
@@ -746,7 +746,7 @@ export const CreateEventView = () => {
               <h2 className="text-lg font-black uppercase tracking-tighter">Design & Expérience</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
               {/* Color Picker */}
               <div className="space-y-6">
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Couleur de Marque</label>
@@ -809,7 +809,7 @@ export const CreateEventView = () => {
             </div>
 
             {/* Poster */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Affiche (Poster)</label>
                 <div 
@@ -892,7 +892,7 @@ export const CreateEventView = () => {
             </div>
 
             {/* Intensité & Opacité */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Intensité du Halo</label>
