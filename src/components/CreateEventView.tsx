@@ -399,7 +399,14 @@ export const CreateEventView = () => {
 
     if (success) {
       if (publish && !editingEvent) {
-        setCreatedEventData(eventPayload);
+        // Stocker uniquement les données légères pour l'écran de succès
+        // (pas de base64 image qui peut crasher React)
+        setCreatedEventData({
+          name: form.name,
+          slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
+          event_date: form.event_date,
+          location: form.location,
+        });
         setShowSuccess(true);
       } else {
         addToast('success', editingEvent ? 'Événement mis à jour' : 'Brouillon enregistré ! Tu peux le publier depuis "Mes Événements".');
@@ -456,13 +463,15 @@ export const CreateEventView = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Lien de votre site</p>
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Lien de votre microsite</p>
               <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-4">
                 <Globe className="w-4 h-4 text-emerald-500" />
-                <span className="flex-1 text-sm font-mono text-white/60 truncate">{createdEventData.slug}.tickhost.ci</span>
+                <span className="flex-1 text-sm font-mono text-white/60 truncate">
+                  {window.location.origin}/?tenant={createdEventData.slug}
+                </span>
                 <button 
                   onClick={() => {
-                    navigator.clipboard.writeText(`${createdEventData.slug}.tickhost.ci`);
+                    navigator.clipboard.writeText(`${window.location.origin}/?tenant=${createdEventData.slug}`);
                     addToast('success', 'Lien copié !');
                   }}
                   className="p-2 hover:bg-white/10 rounded-lg transition-all"
