@@ -87,9 +87,15 @@ export const CreateEventView = () => {
 
   useEffect(() => {
     if (editingEvent) {
+      // Parser les champs JSON si ce sont encore des strings (venant de la DB)
+      const safeJSON = (val: any, fallback: any) => {
+        if (!val) return fallback;
+        if (typeof val === 'object') return val;
+        try { return JSON.parse(val); } catch { return fallback; }
+      };
+
       setForm({
         ...initialForm,
-        ...(editingEvent as any),
         name: editingEvent.name || '',
         description: editingEvent.description || '',
         event_date: editingEvent.event_date ? editingEvent.event_date.split('T')[0] : '',
@@ -110,14 +116,17 @@ export const CreateEventView = () => {
         dress_code: (editingEvent as any).dress_code || '',
         category: (editingEvent as any).category || 'Concert',
         category_other: (editingEvent as any).category_other || '',
-        options: { ...initialForm.options, ...(editingEvent.options || {}) },
-        info_options: { ...initialForm.info_options, ...(editingEvent.info_options || {}) },
-        home_options: (editingEvent as any).home_options ? { ...initialForm.home_options, ...(editingEvent as any).home_options } : initialForm.home_options,
-        info_sections: Array.isArray(editingEvent.info_sections) ? editingEvent.info_sections : [],
-        gallery_images: Array.isArray(editingEvent.gallery_images) ? editingEvent.gallery_images : [],
-        partners: Array.isArray(editingEvent.partners) ? editingEvent.partners : [],
+        poster_image: '',  // Ne jamais charger le base64 dans le formulaire
+        options: { ...initialForm.options, ...safeJSON(editingEvent.options, {}) },
+        info_options: { ...initialForm.info_options, ...safeJSON(editingEvent.info_options, {}) },
+        home_options: { ...initialForm.home_options, ...safeJSON((editingEvent as any).home_options, {}) },
+        info_sections: Array.isArray(editingEvent.info_sections) ? editingEvent.info_sections : safeJSON(editingEvent.info_sections, []),
+        gallery_images: Array.isArray(editingEvent.gallery_images) ? editingEvent.gallery_images : safeJSON(editingEvent.gallery_images, []),
+        partners: Array.isArray(editingEvent.partners) ? editingEvent.partners : safeJSON(editingEvent.partners, []),
         gallery_title: editingEvent.gallery_title || initialForm.gallery_title,
-        payment_modes: { ...initialForm.payment_modes, ...(editingEvent.payment_modes || {}) }
+        payment_modes: { ...initialForm.payment_modes, ...safeJSON(editingEvent.payment_modes, {}) },
+        partner_billing_enabled: (editingEvent as any).partner_billing_enabled || false,
+        show_logo_instead_of_name: (editingEvent as any).show_logo_instead_of_name || false,
       });
       if (editingEvent.ticketTypes && Array.isArray(editingEvent.ticketTypes)) {
         setTicketTypes(editingEvent.ticketTypes.map(tt => ({
@@ -126,9 +135,10 @@ export const CreateEventView = () => {
           quantity: tt.total_quantity || tt.available_quantity || 0
         })));
       }
+      // Utiliser image_url directement comme aperçu (sans recharger le base64)
       setPosterPreview(editingEvent.image_url || null);
-      setBgPreview(editingEvent.bg_image || null);
-      setLogoPreview(editingEvent.logo_url_main || null);
+      setBgPreview((editingEvent as any).bg_image || null);
+      setLogoPreview((editingEvent as any).logo_url_main || null);
     } else {
       setForm(initialForm);
     }
@@ -399,8 +409,6 @@ export const CreateEventView = () => {
 
     if (success) {
       if (publish && !editingEvent) {
-        // Stocker uniquement les données légères pour l'écran de succès
-        // (pas de base64 image qui peut crasher React)
         setCreatedEventData({
           name: form.name,
           slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
@@ -463,7 +471,7 @@ export const CreateEventView = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Lien de votre microsite</p>
+              <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Lien de votre site</p>
               <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-4">
                 <Globe className="w-4 h-4 text-emerald-500" />
                 <span className="flex-1 text-sm font-mono text-white/60 truncate">
