@@ -196,7 +196,9 @@ export default function App() {
     );
   }
 
-  if (tenantSlug) {
+  // Si l'utilisateur est connecté en mode dashboard (admin/organisateur),
+  // on ignore complètement le tenantSlug pour éviter que le microsite s'affiche
+  if (tenantSlug && !isDashboardView) {
     return (
       <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-primary/30 overflow-x-hidden">
         <ToastContainer />
@@ -235,7 +237,7 @@ export default function App() {
                 </motion.div>
               )}
               {view === 'checkout' && <CheckoutFlow key="checkout" />}
-              {view === 'my-tickets' && <div key="my-tickets">...</div>}
+              {view === 'my-tickets' && <MyEvents key="my-tickets" />}
               {view === 'scanner' && <ScannerView key="scanner" />}
               {view === 'my-events' && <MyEvents key="my-events" />}
               {view === 'promo-codes' && <PromoCodesView key="promo-codes" />}
