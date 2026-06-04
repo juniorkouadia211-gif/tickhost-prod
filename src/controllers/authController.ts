@@ -42,7 +42,7 @@ export const register = async (req: Request, res: Response) => {
       id, fullName, email, hashedPassword, phone, userRole
     );
  
-    const token = jwt.sign({ id, email, role: userRole }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ id, email, role: userRole }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ success: true, token, user: {
       id, fullName, email, role: userRole,
       mobile_money_num: null,
@@ -65,7 +65,7 @@ export const login = async (req: Request, res: Response) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(400).json({ success: false, error: 'Invalid password' });
  
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ success: true, token, user: {
       id: user.id,
       fullName: user.full_name,
