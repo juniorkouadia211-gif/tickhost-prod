@@ -182,6 +182,24 @@ interface AppState {
   setIsSyncing: (isSyncing: boolean) => void;
 }
  
+// Intercepteur global — redirige vers login si token expiré sur n'importe quelle requête
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const res = await originalFetch(...args);
+  if (res.status === 401) {
+    const url = typeof args[0] === 'string' ? args[0] : args[0].toString();
+    // Uniquement pour les routes API protégées (pas le login lui-même)
+    if (url.includes('/api/') && !url.includes('/api/auth/login') && !url.includes('/api/auth/register') && !url.includes('/api/events?tenant=')) {
+      const store = useStore.getState();
+      if (store.user) {
+        store.addToast('error', 'Session expirée — reconnectez-vous');
+        store.logout();
+      }
+    }
+  }
+  return res;
+};
+
 export const useStore = create<AppState>((set, get) => ({
   view: 'list',
   user: null,
@@ -801,8 +819,12 @@ export const useStore = create<AppState>((set, get) => ({
  
   createEvent: async (eventData: any) => {
     const token = localStorage.getItem('token');
-    const { addToast } = get();
-    if (!token) return false;
+    const { addToast, logout } = get();
+    if (!token) {
+      addToast('error', 'Session expirée, veuillez vous reconnecter');
+      get().setView('login');
+      return false;
+    }
     set({ loading: true });
     try {
       const res = await fetch('/api/events', {
@@ -814,6 +836,11 @@ export const useStore = create<AppState>((set, get) => ({
         body: JSON.stringify(eventData)
       });
       const data = await res.json();
+      if (res.status === 401) {
+        addToast('error', 'Session expirée — veuillez vous reconnecter');
+        logout();
+        return false;
+      }
       if (res.ok) {
         addToast('success', 'Événement créé avec succès !');
         await Promise.all([
@@ -835,8 +862,12 @@ export const useStore = create<AppState>((set, get) => ({
  
   updateEvent: async (id: string | number, eventData: any) => {
     const token = localStorage.getItem('token');
-    const { addToast } = get();
-    if (!token) return false;
+    const { addToast, logout } = get();
+    if (!token) {
+      addToast('error', 'Session expirée, veuillez vous reconnecter');
+      get().setView('login');
+      return false;
+    }
     set({ loading: true });
     try {
       const res = await fetch(`/api/events/${id}`, {
@@ -848,10 +879,15 @@ export const useStore = create<AppState>((set, get) => ({
         body: JSON.stringify(eventData)
       });
       const data = await res.json();
+      if (res.status === 401) {
+        addToast('error', 'Session expirée — veuillez vous reconnecter');
+        logout();
+        return false;
+      }
       if (res.ok) {
         addToast('success', 'Événement mis à jour !');
         await Promise.all([
-          get().fetchEvents(),
+          get().fetchEvents('mine'),
           get().fetchStats()
         ]);
         return true;
@@ -860,7 +896,7 @@ export const useStore = create<AppState>((set, get) => ({
       return false;
     } catch (err: any) {
       logger.error('Error updating event', { error: err.message });
-      addToast('error', 'Erreur de connexion');
+      addToast('error', 'Erreur réseau — vérifiez votre connexion');
       return false;
     } finally {
       set({ loading: false });
